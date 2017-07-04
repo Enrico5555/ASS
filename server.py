@@ -1,11 +1,8 @@
 #!/usr/bin/python3.5
 
 import socket
-<<<<<<< HEAD
 from struct import unpack, pack
-=======
 import threading
->>>>>>> ebb90c70695288320bf55854834a7957b1c97874
 import os, sys
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -57,7 +54,7 @@ def main():
 			vc_ip = str(raw_input('Escriba la IP del vecino'))
 			vc_mask = str(raw_input('Escriba la mascara del vecino: '))
 			vc_number = str(raw_input('Escriba el numero de sistema autonomo vecino: '))
-
+			pack =
 			# TODO: connect to new AS
 			# add only if connection is successful!
 			as_neighbors.append({'ip': vc_ip, 'mask': vc_mask, 'as_id': vc_number})
