@@ -21,12 +21,15 @@ def server_loop():
 		init_as_connection(address, client_socket)
 	server_socket.close()
 
-def client_loop():
-	while True:
-		print('YOLO')
+def client_loop(ip, socket):
+	while True: #TODO while connected
+		packet = socket.recv(1024)
+		if not packet: break
+		first_byte = 
+
 
 def init_as_connection(ip, socket):
-	thread = threading.Thread(target = client_loop)
+	thread = threading.Thread(target = client_loop, args=(ip, socket))
 	thread.daemon = True
 	connections.append({'socket': socket, 'ip': ip, 'thread': thread})
 	thread.start()
@@ -61,6 +64,8 @@ def main():
 			if not socket: break
 			
 			# TODO: connect to new AS
+			packet = create_connection_packet({'type':1, 'as_id':as_id ,'ip':ip, 'mask':mask })
+			# TODO: send connection packet to neighbo
 			# add only if connection is successful!
 			as_neighbors.append({'ip': vc_ip, 'mask': vc_mask, 'as_id': vc_number})
 			as_neighbors_log.append({'op': 1, 'timestamp': 0, 'origin': None}) # op: 1 = CREATE
@@ -70,7 +75,7 @@ def main():
 
 def new_connection(b):
 
-def parse_bytes(buffer):
+def parse_connection_packet(buffer):
 	if (len(buffer)) != 11):
 		print ("no sea fofi")
 		return 0
@@ -81,7 +86,7 @@ def parse_bytes(buffer):
 	mask  = str(b[7])+"."+str(b[8])+"."+str(b[9])+"."+str(b[10])
 	return {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
 
-def write_bytes(**dictn):
+def create_connection_packet(**dictn):
 	return pack("BhBBBBBBBB",dictn['type'], dictn['as_id'], *[ord(chr(int(x))) for x in dictn['ip'].split(".")], *[ord(chr(int(x))) for x in dictn['mask'].split(".")])
 
 if __name__ == "__main__":
