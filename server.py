@@ -13,6 +13,9 @@ running = True
 as_neighbors = []
 as_neighbors_log = []
 
+reachability = []
+reachability_log = []
+
 hosts = []
 
 connections = []
@@ -86,7 +89,7 @@ def create_connection_packet(**dictn):
 
 def create_socket(ip, port):
 	cli_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	cli_socket.connect(ip, port)
+	cli_socket.connect((ip, port))
 	if not cli_socket: 
 		print("no se pudo conectar a esa dir IP")
 		return 0
