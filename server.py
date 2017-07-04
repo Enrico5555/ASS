@@ -1,4 +1,5 @@
 #!/usr/bin/python3.5
+#coding: utf-8
 
 import socket
 from struct import unpack, pack
@@ -29,6 +30,10 @@ CONNECTION_SUCCESS = 1
 CONNECTION_TIMEOUT = 2
 CONNECTION_ERROR = 3
 
+my_as_ip = ''
+my_as_mask = ''
+my_as_id = 0
+
 
 def server_loop():
 	while running:
@@ -36,9 +41,9 @@ def server_loop():
 		init_as_connection(address, client_socket)
 	server_socket.close()
 
-def client_loop(ip, socket):
+def client_loop(ip, cli_socket):
 	while True: #TODO while connected
-		packet = socket.recv(RECIEVE_BUFFER)
+		packet = cli_socket.recv(RECIEVE_BUFFER)
 		if not packet: break
 		first_byte = packet[0];
 		if(int(first_byte) == REQUESTED_CONNECTION):
@@ -50,140 +55,20 @@ def client_loop(ip, socket):
 			as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
 			#send connection ack
 			packet = create_connection_packet({'type':ACCEPTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
-			socket.send(packet)
+			cli_socket.send(packet)
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
 			dictn = parse_conenction_packet(packet)
 			for ngh in as_neighbors[:]:
 				if(ngh['as_id'] == dictn['as_id']):
 					as_neighbors.remove(ngh)
 			packet = create_connection_packet({'type':ACCEPTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
-			socket.send(packet)
+			cli_socket.send(packet)
 
-def init_as_connection(ip, socket):
-	thread = threading.Thread(target = client_loop, args=(ip, socket))
+def init_as_connection(ip, cli_socket):
+	thread = threading.Thread(target = client_loop, args=(ip, cli_socket))
 	thread.daemon = True
-	connections.append({'socket': socket, 'ip': ip, 'thread': thread})
+	connections.append({'socket': cli_socket, 'ip': ip, 'thread': thread})
 	thread.start()
-
-def main():
-	# setup
-	my_as_ip = str(raw_input('Escriba la IP del sistema autonomo: '))
-	my_as_mask = str(raw_input('Escriba la mascara: '))
-	my_as_id = int(raw_input('Escriba el numero de sistema autonomo: '))
-
-	server_socket.bind(('0.0.0.0', LISTEN_PORT))
-	server_socket.listen(5)
-	thread = threading.Thread(target=server_loop)
-	thread.daemon = True
-	thread.start()
-
-	choice = -1
-	while choice != 0:
-		choice = int(raw_input('Que desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n0 - Salir.\n'))
-		if choice == 0:
-			# TODO: close socket
-			for connection in connections:
-				connection['socket'].close()
-			running = False
-		if choice == 1:
-			vc_ip = str(raw_input('Escriba la IP del vecino'))
-			vc_mask = str(raw_input('Escriba la mascara del vecino: '))
-			vc_number = int(raw_input('Escriba el numero de sistema autonomo vecino: '))
-			
-			socket = create_socket(vc_ip, LISTEN_PORT)
-			
-			again = True
-			while again:
-				packet = create_connection_packet({'type':REQUESTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
-				socket.send(packet)
-				#sent_time=time()
-				
-				try:
-					packet = socket.recv(RECIEVE_BUFFER)
-				except socket.timeout, e:
-					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection timeout'})
-					answer = ''
-					while answer != 'y' and answer != 'n':
-						answer = str(raw_input('Conexion duro mas de 5 segundos, reintentar? [y/n] '))
-					if(answer == 'y'):
-						break
-					elif(answer == 'n'):
-						socket.close()
-						again = False
-						break
-					
-				except socket.error, e:
-					print('Error de conexion del socket!\n')
-					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
-					socket.close()
-					again = False
-					break
-				else:
-					again = False
-					if(int(packet[0]) == ACCEPTED_CONNECTION): #Not sure if works, ==2: accept connection
-						dictn = parse_connection_packet(packet)
-						as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
-						as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
-						init_as_connection(vc_ip,socket)
-						print('¡Conexión Exitosa!\n')
-					else:
-						print('¡Error de paquete!\n')
-						socket.close()
-						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
-			
-
-		if choice == 2: #DISCONNECT
-			vc_number = str(raw_input('Escriba el numero de sistema autonomo vecino a desconectar: '))
-			found = [p for p in as_neighbors if p['as_id'] == dictn['as_id']]
-			if(len(found) == 0):
-				print('No existe ese s.a. en los vecinos')
-				break
-			neighbor = found[0]
-			for connection in connections:
-				if connection['ip'] == neighbor['ip']:
-					socket = connection['socket']
-			if not socket:
-				print('No existe ese s.a. en los vecinos')
-				as_neighbors.remove(neighbor)
-				break
-			
-			again = True
-			while again:
-				packet = create_connection_packet({'type':REQUESTED_DISCONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
-				socket.send(packet)
-				try:
-					packet = socket.recv(RECIEVE_BUFFER)
-				except socket.timeout, e:
-					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
-					answer = str(raw_input('Confirmación de desconexión duró más de 5 segundos, desconectando...'))
-					socket.close()
-					again = False
-					print('¡Desconexión Exitosa!\n')
-					break
-					
-				except socket.error, e:
-					print('¡Error de conexión del socket!\n')
-					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Conection error'})
-					socket.close()
-					again = True
-					break
-				else:
-					again = False
-					if(int(packet[0]) == ACCEPTED_DISCONNECTION): #Not sure if works, == 3: accept connection
-						dictn = parse_connection_packet(packet)
-						as_neighbors.remove(neighbor)
-						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disonection success'}) # op: 1 = CREATE
-						socket.close()
-						print('¡Desconexión Exitosa!\n')
-					else:
-						print('¡Error de paquete!\n')
-						socket.close()
-						as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
-			
-		if choice == 3:
-			break
-			
-			
 
 def parse_connection_packet(buffer):
 	if (len(buffer) != 11):
@@ -197,20 +82,158 @@ def parse_connection_packet(buffer):
 	return {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
 
 def create_connection_packet(**dictn):
-	return pack("BhBBBBBBBB",dictn['type'], dictn['as_id'], *[ord(chr(int(x))) for x in dictn['ip'].split(".")], *[ord(chr(int(x))) for x in dictn['mask'].split(".")])
+	return pack("BhBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
 
 def create_socket(ip, port):
-	socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	socket.connect(ip, port)
-	if not socket: 
+	cli_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	cli_socket.connect(ip, port)
+	if not cli_socket: 
 		print("no se pudo conectar a esa dir IP")
-		break
-	socket.settimeout(5)
-	return socket
-
-
-def disconnectNeighbor():
+		return 0
+	cli_socket.settimeout(5)
+	return cli_socket
 	
+
+def main():
+	# setup
+	while True:
+		my_as_ip = str(input("Escriba la IP del sistema autónomo: "))
+		if my_as_ip == '' or  not my_as_ip:
+			print("Ip no válida")
+		else:
+			break
+	
+
+	while True:
+		my_as_mask = str(input('Escriba la máscara: '))
+		if my_as_mask == '' or  not my_as_mask:
+			print("Máscara no válida")
+		else:
+			break
+
+	while True:
+		try:
+			my_as_id = int(input('Escriba el numero de sistema autónomo: '))
+			if not my_as_mask:
+				print("id no válida")
+			else:
+				break
+		except Exception:
+			print("id no válida")
+		
+	
+	server_socket.bind(('0.0.0.0', LISTEN_PORT))
+	server_socket.listen(5)
+	thread = threading.Thread(target=server_loop)
+	thread.daemon = True
+	thread.start()
+
+	choice = -1
+	while choice != 0:
+		choice = int(input('Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n0 - Salir.\n'))
+		if choice == 0:
+			# TODO: close socket
+			for connection in connections:
+				connection['socket'].close()
+			running = False
+		if choice == 1:
+			vc_ip = str(input('Escriba la IP del vecino: '))
+			vc_mask = str(input('Escriba la máscara del vecino: '))
+			vc_number = int(input('Escriba el numero de sistema autónomo vecino: '))
+			
+			cli_socket = create_socket(vc_ip, LISTEN_PORT)
+			
+			again = True
+			while again:
+				packet = create_connection_packet({'type':REQUESTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+				cli_socket.send(packet)
+				#sent_time=time()
+				
+				try:
+					packet = cli_socket.recv(RECIEVE_BUFFER)
+				except socket.timeout:
+					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection timeout'})
+					answer = ''
+					while answer != 'y' and answer != 'n':
+						answer = str(input('Conexión duró más de 5 segundos, reintentar? [y/n] '))
+					if(answer == 'y'):
+						break
+					elif(answer == 'n'):
+						cli_socket.close()
+						again = False
+						break
+					
+				except socket.error:
+					print('Error de conexión del socket!\n')
+					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
+					cli_socket.close()
+					again = False
+					break
+				else:
+					again = False
+					if(int(packet[0]) == ACCEPTED_CONNECTION): #Not sure if works, ==2: accept connection
+						dictn = parse_connection_packet(packet)
+						as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
+						as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
+						init_as_connection(vc_ip,cli_socket)
+						print("¡Conexión Exitosa!\n")
+					else:
+						print('¡Error de paquete!\n')
+						cli_socket.close()
+						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
+			
+
+		if choice == 2: #DISCONNECT
+			vc_number = str(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
+			found = [p for p in as_neighbors if p['as_id'] == dictn['as_id']]
+			if(len(found) == 0):
+				print('No existe ese s.a. en los vecinos')
+				break
+			neighbor = found[0]
+			for connection in connections:
+				if connection['ip'] == neighbor['ip']:
+					cli_socket = connection['socket']
+			if not cli_socket:
+				print('No existe ese s.a. en los vecinos')
+				as_neighbors.remove(neighbor)
+				break
+			
+			again = True
+			while again:
+				packet = create_connection_packet({'type':REQUESTED_DISCONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+				cli_socket.send(packet)
+				try:
+					packet = cli_socket.recv(RECIEVE_BUFFER)
+				except socket.timeout:
+					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
+					answer = str(input('Confirmación de desconexión duró más de 5 segundos, desconectando...'))
+					cli_socket.close()
+					again = False
+					print('¡Desconexión Exitosa!\n')
+					break
+					
+				except socket.error:
+					print('¡Error de conexión del socket!\n')
+					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Conection error'})
+					cli_socket.close()
+					again = True
+					break
+				else:
+					again = False
+					if(int(packet[0]) == ACCEPTED_DISCONNECTION): #Not sure if works, == 3: accept connection
+						dictn = parse_connection_packet(packet)
+						as_neighbors.remove(neighbor)
+						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disonection success'}) # op: 1 = CREATE
+						cli_socket.close()
+						print('¡Desconexión Exitosa!\n')
+					else:
+						print('¡Error de paquete!\n')
+						cli_socket.close()
+						as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
+			
+		if choice == 3:
+			break
+			
 
 if __name__ == "__main__":
 	#esto corre de primero
