@@ -21,11 +21,23 @@ def server_loop():
 		init_as_connection(address, client_socket)
 	server_socket.close()
 
-def client_loop(ip, socket):
+def client_loop(ip, socket, neigbor):
 	while True: #TODO while connected
 		packet = socket.recv(1024)
 		if not packet: break
-		first_byte = 
+		first_byte = packet[0];
+		if(int(first_byte) == 1):
+			#is connection request
+			dictn = parse_connection_packet(packet);
+			#send connection ack
+			socket.send()
+		else if(int(first_byte) == 2):
+			
+			as_neighbors.append({'ip': vc_ip, 'mask': vc_mask, 'as_id': vc_number})
+			as_neighbors_log.append({'op': 1, 'timestamp': 0, 'origin': None}) # op: 1 = CREATE
+			else if(int(first_byte) == 4):
+				
+				else if(int(first_byte) == 3):
 
 
 def init_as_connection(ip, socket):
@@ -62,13 +74,10 @@ def main():
 			socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			socket.connect(vc_ip, 57809)
 			if not socket: break
-			
+			init_as_connection(vc_ip, socket)
 			# TODO: connect to new AS
 			packet = create_connection_packet({'type':1, 'as_id':as_id ,'ip':ip, 'mask':mask })
-			# TODO: send connection packet to neighbo
-			# add only if connection is successful!
-			as_neighbors.append({'ip': vc_ip, 'mask': vc_mask, 'as_id': vc_number})
-			as_neighbors_log.append({'op': 1, 'timestamp': 0, 'origin': None}) # op: 1 = CREATE
+			socket.send(packet)
 		if choice == 2:
 			host_ip = str(raw_input('Escriba la IP del host: '))
 			hosts.append(host_ip)
