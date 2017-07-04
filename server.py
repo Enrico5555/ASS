@@ -18,7 +18,7 @@ connections = []
 def server_loop():
 	while running:
 		(client_socket, address) = server_socket.accept()
-		# create thread to receive new messages
+		init_as_connection(address, client_socket)
 	server_socket.close()
 
 def client_loop():
@@ -49,12 +49,17 @@ def main():
 		choice = int(raw_input('Que desea hacer?\n1 - Agregar vecino.\n2 - Agregar host.\n0 - Salir.\n'))
 		if choice == 0:
 			# TODO: close socket
+			for connection in connections:
+				connection['socket'].close()
 			running = False
 		if choice == 1:
 			vc_ip = str(raw_input('Escriba la IP del vecino'))
 			vc_mask = str(raw_input('Escriba la mascara del vecino: '))
 			vc_number = str(raw_input('Escriba el numero de sistema autonomo vecino: '))
-			pack =
+			socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			socket.connect(vc_ip, 57809)
+			if not socket: break
+			
 			# TODO: connect to new AS
 			# add only if connection is successful!
 			as_neighbors.append({'ip': vc_ip, 'mask': vc_mask, 'as_id': vc_number})
@@ -77,7 +82,7 @@ def parse_bytes(buffer):
 	return {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
 
 def write_bytes(**dictn):
-		return pack("BhBBBBBBBB",dictn['type'], dictn['as_id'], *[ord(chr(int(x))) for x in dictn['ip'].split(".")], *[ord(chr(int(x))) for x in dictn['mask'].split(".")])
+	return pack("BhBBBBBBBB",dictn['type'], dictn['as_id'], *[ord(chr(int(x))) for x in dictn['ip'].split(".")], *[ord(chr(int(x))) for x in dictn['mask'].split(".")])
 
 if __name__ == "__main__":
 	#esto corre de primero
