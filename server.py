@@ -20,7 +20,9 @@ my_as_mask = ''
 global my_as_id
 my_as_id = 0
 
+global reachability
 reachability = []
+global reachability_log
 reachability_log = []
 
 hosts = []
@@ -33,6 +35,7 @@ REQUESTED_CONNECTION = 1
 ACCEPTED_CONNECTION = 2
 REQUESTED_DISCONNECTION = 3
 ACCEPTED_DISCONNECTION = 4
+REACHABILITY_UPDATE = 5
 
 
 #log OP
@@ -68,7 +71,7 @@ def client_loop(ip, cli_socket):
 			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
-			dictn = parse_conenction_packet(packet)
+			dictn = parse_connection_packet(packet)
 			for ngh in as_neighbors[:]:
 				if(ngh['as_id'] == dictn['as_id']):
 					as_neighbors.remove(ngh)
