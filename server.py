@@ -56,6 +56,7 @@ def client_loop(ip, cli_socket):
 			if(len([p for p in as_neighbors if p['as_id'] == dictn['as_id']])>0):
 				break
 			as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
+			print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
 			#send connection ack
 			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
@@ -74,12 +75,14 @@ def init_as_connection(ip, cli_socket):
 	thread.start()
 
 def parse_connection_packet(buffer):
-	if (len(buffer) != 11):
+	if (len(buffer) != 12):
+		print(buffer)
+		print(len(buffer))
 		print ("no sea fofi")
 		return 0
 	b = []
 	b = unpack("BhBBBBBBBB",buffer);
-	as_id = b[1]
+	as_id = int(b[1])
 	ip = str(b[2])+"."+str(b[3])+"."+str(b[4])+"."+str(b[5])
 	mask  = str(b[6])+"."+str(b[7])+"."+str(b[8])+"."+str(b[9])
 	return {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
