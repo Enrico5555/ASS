@@ -204,9 +204,9 @@ def main():
 						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
 
 
-		if choice == 2: #DISCONNECT
+		elif choice == 2: #DISCONNECT
 			vc_number = str(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
-			found = [p for p in as_neighbors if p['as_id'] == dictn['as_id']]
+			found = [p for p in as_neighbors if p['as_id'] == vc_number]
 			if(len(found) == 0):
 				print('No existe ese s.a. en los vecinos')
 				break
@@ -252,8 +252,10 @@ def main():
 						cli_socket.close()
 						as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
 
-		if choice == 3:
+		elif choice == 3:
 			print( as_neighbors)
+		elif:
+			print("No sea fofi x2")
 
 
 if __name__ == "__main__":
