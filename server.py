@@ -10,8 +10,8 @@ from time import time
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 running = True
 
-as_neighbors = []
-as_neighbors_log = []
+global as_neighbors = []
+global as_neighbors_log = []
 
 reachability = []
 reachability_log = []
@@ -33,9 +33,9 @@ CONNECTION_SUCCESS = 1
 CONNECTION_TIMEOUT = 2
 CONNECTION_ERROR = 3
 
-my_as_ip = ''
-my_as_mask = ''
-my_as_id = 0
+global my_as_ip = ''
+global my_as_mask = ''
+global my_as_id = 0
 
 
 def server_loop():
