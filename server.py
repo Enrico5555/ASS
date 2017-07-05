@@ -57,14 +57,14 @@ def client_loop(ip, cli_socket):
 				break
 			as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
 			#send connection ack
-			packet = create_connection_packet({'type':ACCEPTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
 			dictn = parse_conenction_packet(packet)
 			for ngh in as_neighbors[:]:
 				if(ngh['as_id'] == dictn['as_id']):
 					as_neighbors.remove(ngh)
-			packet = create_connection_packet({'type':ACCEPTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
 
 def init_as_connection(ip, cli_socket):
@@ -148,7 +148,7 @@ def main():
 			
 			again = True
 			while again:
-				packet = create_connection_packet({'type':REQUESTED_CONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+				packet = create_connection_packet(type=REQUESTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 				cli_socket.send(packet)
 				#sent_time=time()
 				
@@ -203,7 +203,7 @@ def main():
 			
 			again = True
 			while again:
-				packet = create_connection_packet({'type':REQUESTED_DISCONNECTION, 'as_id':my_as_id ,'ip':my_as_ip, 'mask':my_as_mask })
+				packet = create_connection_packet(type=REQUESTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 				cli_socket.send(packet)
 				try:
 					packet = cli_socket.recv(RECIEVE_BUFFER)
