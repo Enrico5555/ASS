@@ -254,7 +254,7 @@ def main():
 
 		elif choice == 3:
 			print( as_neighbors)
-		elif:
+		else:
 			print("No sea fofi x2")
 
 
