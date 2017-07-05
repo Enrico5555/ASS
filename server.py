@@ -83,20 +83,41 @@ def init_as_connection(ip, cli_socket):
 	thread.start()
 
 def parse_connection_packet(buffer):
-	if (len(buffer) != 12):
+	if (len(buffer) != 11):
 		print(buffer)
 		print(len(buffer))
 		print ("no sea fofi")
 		return 0
 	b = []
-	b = unpack("BhBBBBBBBB",buffer);
+	b = unpack("=BHBBBBBBBB",buffer);
 	as_id = int(b[1])
+	ip = str(b[2])+"."+str(b[3])+"."+str(b[4])+"."+str(b[5])
+	mask  = str(b[6])+"."+str(b[7])+"."+str(b[8])+"."+str(b[9])
+	dic = {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
+	print(dic)
+	return dic
+
+def create_connection_packet(**dictn):
+	print(dictn)
+	return pack("=BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+
+def parse_reachability_packet(buffer):
+	if (len(buffer) < 18):
+		print ("no sea fofi")
+		return 0
+	b = []
+	b = unpack("hi",buffer[:6]);
+	as_id = int(b[1])
+	destination_amount = b[2]
+	destinantions = []
+	#for i in range(0,destination_amount):
 	ip = str(b[2])+"."+str(b[3])+"."+str(b[4])+"."+str(b[5])
 	mask  = str(b[6])+"."+str(b[7])+"."+str(b[8])+"."+str(b[9])
 	return {'type':b[0], 'as_id':as_id ,'ip':ip, 'mask':mask }
 
-def create_connection_packet(**dictn):
-	return pack("BhBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+def create_reachability_packet(**dictn):
+	return pack("=BhBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+
 
 def create_socket(ip, port):
 	cli_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -191,6 +212,8 @@ def main():
 					break
 				else:
 					again = False
+					if not packet:
+						continue
 					if(int(packet[0]) == ACCEPTED_CONNECTION): #Not sure if works, ==2: accept connection
 						dictn = parse_connection_packet(packet)
 
