@@ -77,6 +77,9 @@ def client_loop(ip, cli_socket):
 					as_neighbors.remove(ngh)
 			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
+		elif(int(first_byte) == REACHABILITY_UPDATE):
+			dictn = parse_reachability_packet(packet)
+			#TODO actualizacion de tabla de reachability
 
 def init_as_connection(ip, cli_socket):
 	thread = threading.Thread(target = client_loop, args=(ip, cli_socket))
