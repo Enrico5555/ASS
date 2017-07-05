@@ -23,15 +23,21 @@ global as_neighbors
 as_neighbors = []
 global as_neighbors_log
 as_neighbors_log = []
+as_neighbors_lock = threading.Lock()
 
 #TABLAS DE ALCANZABILIDAD
 global reachability
 reachability = []
+reachability_lock = threading.Lock()
 global reachability_log
 reachability_log = []
+reachability_log_lock = threading.Lock()
 
 hosts = []
+
+global connections
 connections = []
+connections_lock = threading.Lock()
 
 running = True
 
@@ -61,6 +67,7 @@ def server_loop():
 #LISTENER PARA MENSAJES ENTRANTES
 def client_loop(ip, cli_socket):
 	global as_neighbors
+	global reachability
 	cli_socket.settimeout(None)
 	while True: #TODO while connected
 		packet = cli_socket.recv(RECIEVE_BUFFER)
@@ -73,28 +80,50 @@ def client_loop(ip, cli_socket):
 			dictn = parse_connection_packet(packet);
 			if(len([p for p in as_neighbors if p['as_id'] == dictn['as_id']])>0):
 				continue
-			as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
-			print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
-			#send connection ack
-			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
-			cli_socket.send(packet)
+			with as_neighbors_lock:
+				as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id']})
+				as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Conection success'})
+				print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
+				#send connection ack
+				packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
+				cli_socket.send(packet)
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
 			dictn = parse_connection_packet(packet)
 			for ngh in as_neighbors[:]:
 				if(ngh['as_id'] == dictn['as_id']):
-					as_neighbors.remove(ngh)
-			packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
+					with as_neighbors_lock:
+						as_neighbors.remove(ngh)
+						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Disconection success'})
+			packet = create_connection_packet(type=ACCEPTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
+			thread =None
+			for connection in connections[:]:
+				if(connection['ip'] == dictn['ip']):
+					with connections_lock:
+						connection['socket'].close()
+						thread = connection['thread']
+						connections.remove(connection)
+			thread.join()
 		elif(int(first_byte) == REACHABILITY_UPDATE):
 			dictn = parse_reachability_packet(packet)
-			#TODO actualizacion de tabla de reachability
+			as_from = dictn['as_id']
+			for destination in dictn['destinations']:
+				dont_have_it = True
+				for router in reachability:
+					if router['ip'] ==  destination['ip']and router['mask'] == destination['mask']:
+						if len(router['route']) > (len(destination['route'])+1):
+							router['route'] = destination['route'].insert(0, as_from)
+						dont_have_it = False
+						break
+				if dont_have_it:
+					reachability.append({'ip':destination['ip'],'mask':destination['mask'],'route':destination['route'].insert(0, as_from)})
 
-#
 def init_as_connection(ip, cli_socket):
 	thread = threading.Thread(target = client_loop, args=(ip, cli_socket))
 	thread.daemon = True
 	global	connections
-	connections.append({'socket': cli_socket, 'ip': ip, 'thread': thread})
+	with connections_lock:
+		connections.append({'socket': cli_socket, 'ip': ip, 'thread': thread})
 	thread.start()
 
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
@@ -136,12 +165,12 @@ def parse_reachability_packet(buffer):
 		ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
 		mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[6])
 		as_amount = b[8]
-		as_list = []
+		route = []
 		byte_idx= byte_idx+10
 		for j in range(0,as_amount):
-			as_list.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
+			route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
 			byte_idx=byte_idx+2
-		destinations.append({'ip':ip, 'mask':mask, 'as_list':as_list})
+		destinations.append({'ip':ip, 'mask':mask, 'route':route})
 	return {'as_id':as_id,'destinations':destinations}
 
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
@@ -151,22 +180,32 @@ def create_reachability_packet(**dictn):
 	packet.append(pack("=hi", dictn['as_id'], len(destinations)))
 	for destination in destinations:
 		packet.append(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
-		as_list=destination['as_list']
-		packet.append(pack("=h",len(as_list)))
-		for ass in as_list:
+		route=destination['route']
+		packet.append(pack("=h",len(route)))
+		for ass in route:
 			packet.append(pack("=h",ass))
 	return packet
 
 #CONECTA EL SOCKET CON EL SERVER
 def create_socket(ip, port):
 	cli_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	cli_socket.connect((ip, port))
-	if not cli_socket:
-		print("No se pudo conectar a esa dirección IP")
-		return 0
 	cli_socket.settimeout(5)
-	return cli_socket
+	try:
+		cli_socket.connect((ip, port))
+		return cli_socket
+	except socket.timeout:
+		print("No se pudo conectar a esa dirección IP\n")
+		return 0
 
+def send_reachability_loop():
+	last_time = 0
+	while True:
+		if last_time + 30 >= time():
+				reachability_packet = parse_reachability_packet({'as_id':my_as_id,'destinations':reachability})
+				with as_neighbors_lock:
+					for connection in connections:
+						connection['socket'].send(reachability_packet)
+				last_time = time()
 
 def main():
 	# setup
@@ -213,22 +252,25 @@ def main():
 	global reachability_log
 	while choice != 0:
 		try:
-			choice = int(input('Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n0 - Salir.\n'))
+			choice = int(input('¿Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n0 - Salir.\n'))
 		except Exception:
 			print("Escriba un número")
 			continue
 		if choice == 0:
 			# TODO: close socket
-			for connection in connections:
-				connection['socket'].close()
-			running = False
+			with connections_lock:
+				for connection in connections:
+					connection['socket'].close()
+					connection['thread'].join()
+				running = False
 		if choice == 1:
 			vc_ip = str(input('Escriba la IP del vecino: '))
 			vc_mask = str(input('Escriba la máscara del vecino: '))
 			vc_number = int(input('Escriba el numero de sistema autónomo vecino: '))
 
 			cli_socket = create_socket(vc_ip, LISTEN_PORT)
-
+			if cli_socket == 0:
+				continue
 			while True:
 				packet = create_connection_packet(type=REQUESTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 				cli_socket.send(packet)
@@ -237,7 +279,8 @@ def main():
 				try:
 					packet = cli_socket.recv(RECIEVE_BUFFER)
 				except socket.timeout:
-					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection timeout'})
+					with as_neighbors_lock:
+						as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection timeout'})
 					answer = ''
 					while answer != 'y' and answer != 'n':
 						answer = str(input('Conexión duró más de 5 segundos, reintentar? [y/n] '))
@@ -249,26 +292,29 @@ def main():
 
 				except socket.error:
 					print('Error de conexión del socket!\n')
-					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
+					with as_neighbors_lock:
+						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
 					cli_socket.close()
 					break
 				else:
 					if not packet:
 						print('Error de conexión del socket!\n')
-						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
+						with as_neighbors_lock:
+							as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection error'})
 						cli_socket.close()
 						break
 					if(int(packet[0]) == ACCEPTED_CONNECTION): #Not sure if works, ==2: accept connection
 						dictn = parse_connection_packet(packet)
-
-						as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
-						as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
-						init_as_connection(vc_ip,cli_socket)
+						with as_neighbors_lock:
+							as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
+							as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
+							init_as_connection(vc_ip,cli_socket)
 						print("¡Conexión Exitosa!\n")
 					else:
 						print('¡Error de paquete!\n')
 						cli_socket.close()
-						as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
+						with as_neighbors_lock:
+							as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
 
 
 		elif choice == 2: #DISCONNECT
@@ -278,12 +324,16 @@ def main():
 				print('No existe ese s.a. en los vecinos')
 				continue
 			neighbor = found[0]
+
 			for connection in connections:
 				if connection['ip'] == neighbor['ip']:
 					cli_socket = connection['socket']
-			if not cli_socket:
+					thread = connection['thread']
+					this_connection = connection
+			if not cli_socket or not thread:
 				print('No existe ese s.a. en los vecinos')
-				as_neighbors.remove(neighbor)
+				with as_neighbors_lock:
+					as_neighbors.remove(neighbor)
 				continue
 
 
@@ -292,42 +342,48 @@ def main():
 			try:
 				packet = cli_socket.recv(RECIEVE_BUFFER)
 			except socket.timeout:
-				as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
+				with as_neighbors_lock:
+					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
 				answer = str(input('Confirmación de desconexión duró más de 5 segundos, desconectando...'))
-				cli_socket.close()
+
+
 				print('¡Desconexión Exitosa!\n')
 
 			except socket.error:
 				print('¡Error de conexión del socket!\n')
-				as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Conection error'})
-				cli_socket.close()
-
+				with as_neighbors_lock:
+					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Conection error'})
 			else:
 				if(int(packet[0]) == ACCEPTED_DISCONNECTION): #Not sure if works, == 3: accept connection
 					dictn = parse_connection_packet(packet)
-					as_neighbors.remove(neighbor)
-					as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disonection success'}) # op: 1 = CREATE
-					cli_socket.close()
+					with as_neighbors_lock:
+						as_neighbors.remove(neighbor)
+						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disonection success'}) # op: 1 = CREATE
 					print('¡Desconexión Exitosa!\n')
 				else:
 					print('¡Error de paquete!\n')
-					cli_socket.close()
-					as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
-
+					with as_neighbors_lock:
+						as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
+			cli_socket.close()
+			thread.join()
+			with connections_lock:
+				connections.remove(this_connection)
 		elif choice == 3:
 			print( as_neighbors)
 		elif choice == 4:
 			r_ip = str(input('Escriba la IP del router: '))
 			r_mask = str(input('Escriba la máscara del router: '))
-			reachability.append({'ip':r_ip,'mask':r_mask,'route':[]})
-			#TODO added reachability to LOG
+			with reachability_lock:
+				reachability.append({'ip':r_ip,'mask':r_mask,'route':[]})
+				#TODO added reachability to LOG
 		elif choice == 5:
 			r_ip = str(input('Escriba la IP del router a borrar: '))
 			r_mask = str(input('Escriba la máscara del router a borrar: '))
 			for router in reachability[:]:
-				if router['ip']==r_ip and router['mask'] == r_mask
-				reachability.remove(router)
-			#TODO removed reachability to LOG
+				if router['ip']==r_ip and router['mask'] == r_mask:
+					with reachability_lock:
+						reachability.remove(router)
+						#TODO removed reachability to LOG
 		elif choice == 6:
 			print(reachability)
 		else:
