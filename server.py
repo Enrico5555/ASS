@@ -50,17 +50,18 @@ def server_loop():
 
 def client_loop(ip, cli_socket):
 	global as_neighbors
+	cli_socket.settimeout(None)
 	while True: #TODO while connected
 		packet = cli_socket.recv(RECIEVE_BUFFER)
-		if not packet: break
+		if not packet:
+			continue
 		first_byte = packet[0];
 		if(int(first_byte) == REQUESTED_CONNECTION):
 			#is connection request
 			#add dictionary
 			dictn = parse_connection_packet(packet);
 			if(len([p for p in as_neighbors if p['as_id'] == dictn['as_id']])>0):
-				break
-
+				continue
 			as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
 			print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
 			#send connection ack
