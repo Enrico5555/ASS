@@ -10,8 +10,10 @@ from time import time
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 running = True
 
-global as_neighbors = []
-global as_neighbors_log = []
+global as_neighbors 
+as_neighbors = []
+global as_neighbors_log
+as_neigbors_log = []
 
 reachability = []
 reachability_log = []
