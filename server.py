@@ -73,7 +73,7 @@ DISCONNECTION_SUCCESS = 4
 DISCONNECTION_ERROR = 5
 #reachability log OP
 ADDED_ROUTER = 1
-
+REMOVED_ROUTER = 2
 
 
 def server_loop():
