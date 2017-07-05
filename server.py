@@ -305,7 +305,7 @@ def main():
 	global reachability_log
 	while choice != 0:
 		try:
-			choice = int(input('¿Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n0 - Salir.\n'))
+			choice = int(input('¿Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n7 - Enviar paquete de alcanzabilidad\n0 - Salir.\n'))
 		except Exception:
 			print("Escriba un número")
 			continue
@@ -437,6 +437,15 @@ def main():
 						#TODO removed reachability to LOG
 		elif choice == 6:
 			print(str(reachability).replace("}, ","}\n"))
+		elif choice == 7:
+			reachability_packet = create_reachability_packet()
+			with as_neighbors_lock:
+				for connection in connections:
+					try:
+						connection['socket'].send(reachability_packet)
+					except socket.error:
+						print("Error en conexión")
+			print("Se ha mandado un paquete de alcanzabilidad")
 		else:
 			print("Escriba un número válido.\n")
 
