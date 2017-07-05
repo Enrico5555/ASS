@@ -162,7 +162,7 @@ def create_socket(ip, port):
 	cli_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	cli_socket.connect((ip, port))
 	if not cli_socket:
-		print("no se pudo conectar a esa dir IP")
+		print("No se pudo conectar a esa dirección IP")
 		return 0
 	cli_socket.settimeout(5)
 	return cli_socket
@@ -209,8 +209,14 @@ def main():
 	global	connection
 	global as_neighbors_log
 	global as_neighbors
+	global reachability
+	global reachability_log
 	while choice != 0:
-		choice = int(input('Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n0 - Salir.\n'))
+		try:
+			choice = int(input('Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n0 - Salir.\n'))
+		except Exception:
+			print("Escriba un número")
+			continue
 		if choice == 0:
 			# TODO: close socket
 			for connection in connections:
@@ -310,8 +316,22 @@ def main():
 
 		elif choice == 3:
 			print( as_neighbors)
+		elif choice == 4:
+			r_ip = str(input('Escriba la IP del router: '))
+			r_mask = str(input('Escriba la máscara del router: '))
+			reachability.append({'ip':r_ip,'mask':r_mask,'route':[]})
+			#TODO added reachability to LOG
+		elif choice == 5:
+			r_ip = str(input('Escriba la IP del router a borrar: '))
+			r_mask = str(input('Escriba la máscara del router a borrar: '))
+			for router in reachability[:]:
+				if router['ip']==r_ip and router['mask'] == r_mask
+				reachability.remove(router)
+			#TODO removed reachability to LOG
+		elif choice == 6:
+			print(reachability)
 		else:
-			print("No sea fofi x2")
+			print("Escriba un número válido.\n")
 
 
 if __name__ == "__main__":
