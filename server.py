@@ -12,9 +12,12 @@ running = True
 global as_neighbors
 as_neighbors = []
 global as_neighbors_log
-as_neigbors_log = []
+as_neighbors_log = []
+global my_as_ip
 my_as_ip = ''
+global my_as_mask
 my_as_mask = ''
+global my_as_id
 my_as_id = 0
 
 reachability = []
