@@ -71,6 +71,8 @@ CONNECTION_TIMEOUT = 2
 CONNECTION_ERROR = 3
 DISCONNECTION_SUCCESS = 4
 DISCONNECTION_ERROR = 5
+#reachability log OP
+ADDED_ROUTER = 1
 
 
 
@@ -115,6 +117,13 @@ def client_loop(ip, cli_socket):
 					with as_neighbors_lock:
 						as_neighbors.remove(ngh)
 						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Disconection success'})
+						for router in reachability:
+							if router.route[0] == ngh['as_id']:
+								# remove router since it's AS disconnected.
+								with reachability_lock:
+									reachability.remove(router)
+									with reachability_log_lock:
+										reachability_log.append({'op': REMOVED_ROUTER, 'ip': router.ip, 'mask': router.mask})
 			packet = create_connection_packet(type=ACCEPTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			try:
 				cli_socket.send(packet)
@@ -147,6 +156,8 @@ def client_loop(ip, cli_socket):
 				if dont_have_it:
 					destination.add_to_route(my_as_id)
 					reachability.append(destination)
+					with reachability_log_lock:
+						reachability_log.append({'op': ADDED_ROUTER, 'ip': destination.ip, 'mask': destination.mask})
 
 def init_as_connection(ip, cli_socket):
 	thread = threading.Thread(target = client_loop, args=(ip, cli_socket))
