@@ -225,8 +225,8 @@ def create_reachability_packet():
 	for destination in reachability:
 		packet.extend(pack(">BBBBBBBB",*[ord(chr(int(x))) for x in (destination.ip+"."+destination.mask).split(".")]))
 		packet.extend(pack(">h",int(len(destination.route))))
-		for ass in destination.route:
-			packet.extend(pack(">h",ass))
+		for as_n in destination.route:
+			packet.extend(pack(">h",as_n))
 	return packet
 
 #CONECTA EL SOCKET CON EL SERVER
