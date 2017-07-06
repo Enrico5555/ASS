@@ -240,9 +240,13 @@ def main():
 
 	server_socket.bind(('0.0.0.0', LISTEN_PORT))
 	server_socket.listen(5)
-	thread = threading.Thread(target=server_loop)
-	thread.daemon = True
-	thread.start()
+	server_thread = threading.Thread(target=server_loop)
+	server_thread.daemon = True
+	server_thread.start()
+
+	reachability_thread = threading.Thread(target=send_reachability_loop)
+	reachability_thread.daemon = True
+	reachability_thread.start()
 
 	choice = -1
 	global	connection
@@ -262,7 +266,9 @@ def main():
 				for connection in connections:
 					connection['socket'].close()
 					connection['thread'].join()
-				running = False
+				server_thread.join()
+				reachability_thread.join()
+
 		if choice == 1:
 			vc_ip = str(input('Escriba la IP del vecino: '))
 			vc_mask = str(input('Escriba la máscara del vecino: '))
