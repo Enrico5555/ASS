@@ -180,21 +180,25 @@ def create_connection_packet(**dictn):
 def parse_reachability_packet(buffer):
 	try:
 		b = []
-		b = unpack("=Bhi",buffer[:7]);
+		b = unpack(">Bhi",buffer[:7])
+		print(buffer)
+		print(b)
 		as_id = b[1]
 		destination_amount = b[2]
+
 		destinations = []
-		byte_idx=7;
+		byte_idx=6;
 		for i in range(0,destination_amount):
-			b = unpack("=BBBBBBBBh",buffer[byte_idx:byte_idx+11])
+			b = unpack(">BBBBBBBBh",buffer[byte_idx:byte_idx+10])
+			print(b)
 			ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
 			mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[7])
 			as_amount = b[8]
 			router = Router(ip,mask)
 			route = []
-			byte_idx= byte_idx+11
+			byte_idx= byte_idx+10
 			for j in range(0,as_amount):
-				route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
+				route.append(unpack(">h",buffer[byte_idx:byte_idx+2]))
 				byte_idx=byte_idx+2
 			router.route = route;
 			destinations.append(router)
@@ -206,12 +210,12 @@ def parse_reachability_packet(buffer):
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
 def create_reachability_packet():
 	packet = bytearray()
-	packet.extend(pack("=Bhi",5, my_as_id, int(len(reachability))))
+	packet.extend(pack(">Bhi",5, my_as_id, int(len(reachability))))
 	for destination in reachability:
-		packet.extend(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination.ip+"."+destination.mask).split(".")]))
-		packet.extend(pack("=h",int(len(destination.route))))
+		packet.extend(pack(">BBBBBBBB",*[ord(chr(int(x))) for x in (destination.ip+"."+destination.mask).split(".")]))
+		packet.extend(pack(">h",int(len(destination.route))))
 		for ass in destination.route:
-			packet.extend(pack("=h",ass))
+			packet.extend(pack(">h",ass))
 	return packet
 
 #CONECTA EL SOCKET CON EL SERVER
