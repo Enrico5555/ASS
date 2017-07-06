@@ -170,7 +170,7 @@ def parse_connection_packet(buffer):
 
 #COMPONE UN PAQUETE CON DATOS DE NODO
 def create_connection_packet(**dictn):
-	return pack("=BBHBBBBBBBB",5,dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+	return pack("=BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
 
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
 #PAQUETES DE REACHABILITY UPDATE
@@ -203,7 +203,7 @@ def parse_reachability_packet(buffer):
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
 def create_reachability_packet():
 	packet = bytearray()
-	packet.extend(pack("=hi", my_as_id, int(len(reachability))))
+	packet.extend(pack("=Bhi",5, my_as_id, int(len(reachability))))
 	for destination in reachability:
 		packet.extend(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination.ip+"."+destination.mask).split(".")]))
 		packet.extend(pack("=h",int(len(destination.route))))
