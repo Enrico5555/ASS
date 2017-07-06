@@ -142,8 +142,6 @@ def init_as_connection(ip, cli_socket):
 #PAQUETES DE ( (REQUEST || ACCEPT) (CONNECTION || DISCONNECTION) )
 def parse_connection_packet(buffer):
 	if (len(buffer) != 11):
-		print(buffer)
-		print(len(buffer))
 		print ("no sea fofi")
 		return 0
 	b = []
@@ -162,27 +160,27 @@ def create_connection_packet(**dictn):
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
 #PAQUETES DE REACHABILITY UPDATE
 def parse_reachability_packet(buffer):
-	if (len(buffer) < 18):
-		print ("no sea fofi")
-		return 0
-	b = []
-	b = unpack("hi",buffer[:6]);
-	as_id = int(b[1])
-	destination_amount = b[2]
-	destinations = []
-	byte_idx=6;
-	for i in range(0,destination_amount):
-		dest_bytes = unpack("=BBBBBBBBh",buffer[byte_idx:byte_idx+10])
-		ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
-		mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[6])
-		as_amount = b[8]
-		route = []
-		byte_idx= byte_idx+10
-		for j in range(0,as_amount):
-			route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
-			byte_idx=byte_idx+2
-		destinations.append({'ip':ip, 'mask':mask, 'route':route})
-	return {'as_id':as_id,'destinations':destinations}
+	try:
+		b = []
+		b = unpack("=hi",buffer[:6]);
+		as_id = b[0]
+		destination_amount = b[1]
+		destinations = []
+		byte_idx=6;
+		for i in range(0,destination_amount):
+			b = unpack("=BBBBBBBBh",buffer[byte_idx:byte_idx+10])
+			ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
+			mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[7])
+			as_amount = b[8]
+			route = []
+			byte_idx= byte_idx+10
+			for j in range(0,as_amount):
+				route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
+				byte_idx=byte_idx+2
+			destinations.append({'ip':ip, 'mask':mask, 'route':route})
+		return {'as_id':as_id,'destinations':destinations}
+	except Exception as e:
+	 	return 0;
 
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
 def create_reachability_packet():
