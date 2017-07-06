@@ -110,6 +110,8 @@ def client_loop(ip, cli_socket):
 					cli_socket.send(packet)
 				except socket.error:
 					print("Error en conexión")
+				except socket.timeout:
+					print("Error en conexión")
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
 			dictn = parse_connection_packet(packet)
 			for ngh in as_neighbors[:]:
@@ -128,6 +130,8 @@ def client_loop(ip, cli_socket):
 			try:
 				cli_socket.send(packet)
 			except socket.error:
+				print("Error en conexión")
+			except socket.timeout:
 				print("Error en conexión")
 			thread =None
 			for connection in connections[:]:
@@ -381,7 +385,7 @@ def main():
 					cli_socket = connection['socket']
 					thread = connection['thread']
 					this_connection = connection
-
+			cli_socket.settimeout(5)
 			packet = create_connection_packet(type=REQUESTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
 			try:
@@ -390,10 +394,7 @@ def main():
 				with as_neighbors_lock:
 					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
 				answer = str(input('Confirmación de desconexión duró más de 5 segundos, desconectando...'))
-
-
 				print('¡Desconexión Exitosa!\n')
-
 			except socket.error:
 				print('¡Error de conexión del socket!\n')
 				with as_neighbors_lock:
