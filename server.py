@@ -205,10 +205,9 @@ def create_socket(ip, port):
 		return 0
 
 def send_reachability_loop():
-	last_time = 0
+	last_time = time()
 	while True:
-		if last_time + 30 >= time():
-				print("Se ha mandado un paquete de alcanzabilidad")
+		if last_time + 30 <= time():
 				reachability_packet = parse_reachability_packet({'as_id':my_as_id,'destinations':reachability})
 				with as_neighbors_lock:
 					for connection in connections:
@@ -216,6 +215,7 @@ def send_reachability_loop():
 							connection['socket'].send(reachability_packet)
 						except socket.error:
 							print("Error en conexión")
+				print("Se ha mandado un paquete de alcanzabilidad")
 				last_time = time()
 
 def main():
