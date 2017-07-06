@@ -208,6 +208,7 @@ def send_reachability_loop():
 	last_time = 0
 	while True:
 		if last_time + 30 >= time():
+				print("Se ha mandado un paquete de alcanzabilidad")
 				reachability_packet = parse_reachability_packet({'as_id':my_as_id,'destinations':reachability})
 				with as_neighbors_lock:
 					for connection in connections:
@@ -383,7 +384,7 @@ def main():
 			with connections_lock:
 				connections.remove(this_connection)
 		elif choice == 3:
-			print( as_neighbors)
+			print(str(as_neighbors).replace(", ","\n"))
 		elif choice == 4:
 			r_ip = str(input('Escriba la IP del router: '))
 			r_mask = str(input('Escriba la máscara del router: '))
@@ -399,7 +400,7 @@ def main():
 						reachability.remove(router)
 						#TODO removed reachability to LOG
 		elif choice == 6:
-			print(reachability)
+			print(str(reachability).replace(", ","\n"))
 		else:
 			print("Escriba un número válido.\n")
 
