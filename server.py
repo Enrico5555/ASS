@@ -37,6 +37,7 @@ class Router:
 	def __init__(self, ip, mask):
 		self.ip = ip
 		self.mask = mask
+		self.route = []
 
 	def exend_route(self, route):
 		self.route.extend(route)
