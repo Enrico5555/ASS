@@ -112,8 +112,12 @@ def client_loop(ip, cli_socket):
 						thread = connection['thread']
 						connections.remove(connection)
 			thread.join()
-		elif(int(first_byte) == REACHABILITY_UPDATE):
+		else:
 			dictn = parse_reachability_packet(packet)
+			print(packet)
+			if dictn == 0:
+				print("Error parseando paquete de alcanzabilidad")
+				continue
 			as_from = dictn['as_id']
 			for destination in dictn['destinations']:
 				dont_have_it = True
@@ -183,13 +187,13 @@ def parse_reachability_packet(buffer):
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
 def create_reachability_packet():
 	packet = bytearray()
-	packet.append(pack("=hi", my_as_id, int(len(reachability))))
+	packet.extend(pack("=hi", my_as_id, int(len(reachability))))
 	for destination in reachability:
-		packet.append(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
+		packet.extend(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
 		route=destination['route']
-		packet.append(pack("=h",int(len(route))))
+		packet.extend(pack("=h",int(len(route))))
 		for ass in route:
-			packet.append(pack("=h",ass))
+			packet.extend(pack("=h",ass))
 	return packet
 
 #CONECTA EL SOCKET CON EL SERVER
