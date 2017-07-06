@@ -136,7 +136,7 @@ def client_loop(ip, cli_socket):
 						connection['socket'].close()
 						thread = connection['thread']
 						connections.remove(connection)
-			thread.join()
+			#thread.join()
 		elif(int(first_byte) == REACHABILITY_UPDATE):
 			dictn = parse_reachability_packet(packet)
 			print(packet)
@@ -310,7 +310,7 @@ def main():
 			with connections_lock:
 				for connection in connections:
 					connection['socket'].close()
-					connection['thread'].join()
+					#connection['thread'].join()
 				server_thread.join()
 				reachability_thread.join()
 
@@ -367,25 +367,20 @@ def main():
 							as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
 						break
 		elif choice == 2: #DISCONNECT
-			vc_number = str(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
+			vc_number = int(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
 			neighbor = 0
 			for p in as_neighbors:
 				 if p['as_id'] == vc_number:
-					 neighbor = p['as_id']
+					 neighbor = p
 			if(neighbor == 0):
 				print('No existe ese s.a. en los vecinos')
 				continue
+
 			for connection in connections:
 				if connection['ip'] == neighbor['ip']:
 					cli_socket = connection['socket']
 					thread = connection['thread']
 					this_connection = connection
-			if not cli_socket or not thread:
-				print('No existe ese s.a. en los vecinos')
-				with as_neighbors_lock:
-					as_neighbors.remove(neighbor)
-				continue
-
 
 			packet = create_connection_packet(type=REQUESTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			cli_socket.send(packet)
@@ -402,6 +397,7 @@ def main():
 			except socket.error:
 				print('¡Error de conexión del socket!\n')
 				with as_neighbors_lock:
+					as_neighbors.remove(neighbor)
 					as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Conection error'})
 			else:
 				if(int(packet[0]) == ACCEPTED_DISCONNECTION): #Not sure if works, == 3: accept connection
@@ -414,10 +410,13 @@ def main():
 					print('¡Error de paquete!\n')
 					with as_neighbors_lock:
 						as_neighbors_log.append({'op': DISCONNECTION_ERROR, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Packet error'})
-			cli_socket.close()
-			thread.join()
-			with connections_lock:
-				connections.remove(this_connection)
+			try:
+				cli_socket.close()
+				#thread.join()
+				with connections_lock:
+					connections.remove(this_connection)
+			except Exception as e:
+				print("?")
 		elif choice == 3:
 			print(str(as_neighbors).replace("}, ","}\n"))
 		elif choice == 4:
