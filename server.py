@@ -33,7 +33,19 @@ global reachability_log
 reachability_log = []
 reachability_log_lock = threading.Lock()
 
-hosts = []
+class Router:
+	def __init__(self, ip, mask):
+		self.ip = ip
+		self.mask = mask
+
+	def exend_route(self, route):
+		self.route.extend(route)
+
+	def add_to_route(self, as_id):
+		self.route.insert(0,as_id)
+
+	def __str__(self):
+		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
 
 global connections
 connections = []
@@ -122,13 +134,15 @@ def client_loop(ip, cli_socket):
 			for destination in dictn['destinations']:
 				dont_have_it = True
 				for router in reachability:
-					if router['ip'] ==  destination['ip']and router['mask'] == destination['mask']:
-						if len(router['route']) > (len(destination['route'])+1):
-							router['route'] = destination['route'].insert(0, as_from)
+					if router.ip ==  destination.ip and router.mask == destination.mask:
+						if len(router.route) > (len(destination.route)+1):
+							router.route = destination.route
+							router.add_to_route(my_as_id)
 						dont_have_it = False
 						break
 				if dont_have_it:
-					reachability.append({'ip':destination['ip'],'mask':destination['mask'],'route':destination['route'].insert(0, as_from)})
+					destination.add_to_route(my_as_id)
+					reachability.append(destination)
 
 def init_as_connection(ip, cli_socket):
 	thread = threading.Thread(target = client_loop, args=(ip, cli_socket))
@@ -172,12 +186,14 @@ def parse_reachability_packet(buffer):
 			ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
 			mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[7])
 			as_amount = b[8]
+			router = Router(ip,mask)
 			route = []
 			byte_idx= byte_idx+10
 			for j in range(0,as_amount):
 				route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
 				byte_idx=byte_idx+2
-			destinations.append({'ip':ip, 'mask':mask, 'route':route})
+			router.extend_route(route);
+			destinations.append(router)
 		return {'as_id':as_id,'destinations':destinations}
 	except Exception as e:
 	 	return 0;
@@ -187,10 +203,9 @@ def create_reachability_packet():
 	packet = bytearray()
 	packet.extend(pack("=hi", my_as_id, int(len(reachability))))
 	for destination in reachability:
-		packet.extend(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
-		route=destination['route']
-		packet.extend(pack("=h",int(len(route))))
-		for ass in route:
+		packet.extend(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination.ip+"."+destination.mask).split(".")]))
+		packet.extend(pack("=h",int(len(destination.route))))
+		for ass in destination.route:
 			packet.extend(pack("=h",ass))
 	return packet
 
@@ -210,15 +225,16 @@ def send_reachability_loop():
 	while True:
 		if last_time + 30 <= time():
 				global reachability
-				reachability_packet = create_reachability_packet()
-				with as_neighbors_lock:
-					for connection in connections:
-						try:
-							connection['socket'].send(reachability_packet)
-						except socket.error:
-							print("Error en conexión")
-				print("Se ha mandado un paquete de alcanzabilidad")
-				last_time = time()
+				if len(reachability) > 0:
+					reachability_packet = create_reachability_packet()
+					with as_neighbors_lock:
+						for connection in connections:
+							try:
+								connection['socket'].send(reachability_packet)
+							except socket.error:
+								print("Error en conexión")
+					print("Se ha mandado un paquete de alcanzabilidad")
+					last_time = time()
 
 def main():
 	# setup
@@ -391,13 +407,14 @@ def main():
 			r_ip = str(input('Escriba la IP del router: '))
 			r_mask = str(input('Escriba la máscara del router: '))
 			with reachability_lock:
-				reachability.append({'ip':r_ip,'mask':r_mask,'route':[]})
+				router = Router(r_ip,r_mask)
+				reachability.append(router)
 				#TODO added reachability to LOG
 		elif choice == 5:
 			r_ip = str(input('Escriba la IP del router a borrar: '))
 			r_mask = str(input('Escriba la máscara del router a borrar: '))
 			for router in reachability[:]:
-				if router['ip']==r_ip and router['mask'] == r_mask:
+				if router.ip==r_ip and router.mask == r_mask:
 					with reachability_lock:
 						reachability.remove(router)
 						#TODO removed reachability to LOG
