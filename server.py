@@ -48,7 +48,7 @@ class Router:
 	def __str__(self):
 		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
 
-	def __retr__(self):
+	def __repr__(self):
 		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
 
 global connections
@@ -192,7 +192,7 @@ def parse_reachability_packet(buffer):
 			as_amount = b[8]
 			router = Router(ip,mask)
 			route = []
-			byte_idx= byte_idx+10
+			byte_idx= byte_idx+11
 			for j in range(0,as_amount):
 				route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
 				byte_idx=byte_idx+2
