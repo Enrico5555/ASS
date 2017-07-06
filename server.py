@@ -368,12 +368,13 @@ def main():
 						break
 		elif choice == 2: #DISCONNECT
 			vc_number = str(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
-			found = [p for p in as_neighbors if p['as_id'] == vc_number]
-			if(len(found) == 0):
+			neighbor = 0
+			for p in as_neighbors:
+				 if p['as_id'] == vc_number:
+					 neighbor = p['as_id']
+			if(neighbor == 0):
 				print('No existe ese s.a. en los vecinos')
 				continue
-			neighbor = found[0]
-
 			for connection in connections:
 				if connection['ip'] == neighbor['ip']:
 					cli_socket = connection['socket']
