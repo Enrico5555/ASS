@@ -305,7 +305,7 @@ def main():
 	global reachability_log
 	while choice != 0:
 		try:
-			choice = int(input('¿Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n7 - Enviar paquete de alcanzabilidad\n0 - Salir.\n'))
+			choice = int(input('¿Qué desea hacer?\n1 - Agregar vecino.\n2 - Desconectar vecino.\n3 - Mostrar vecinos.\n4 - Agregar router\n5 - Quitar router\n6 - Ver routers\n7 - Enviar paquete de alcanzabilidad\n8 - Ver logs de vecinos\n9 - Ver logs de alcanzabilidad\n0 - Salir.\n'))
 		except Exception:
 			print("Escriba un número")
 			continue
@@ -446,6 +446,12 @@ def main():
 					except socket.error:
 						print("Error en conexión")
 			print("Se ha mandado un paquete de alcanzabilidad")
+		elif choice == 8:
+			with as_neighbors_lock:
+				print(as_neighbors_log)
+		elif choice == 9:
+			with reachability_log_lock:
+				print(reachability_log)
 		else:
 			print("Escriba un número válido.\n")
 
