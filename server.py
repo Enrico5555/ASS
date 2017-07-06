@@ -184,11 +184,11 @@ def parse_reachability_packet(buffer):
 def create_reachability_packet(**dictn):
 	packet = bytearray()
 	destinations = dictn['destinations']
-	packet.append(pack("=hi", dictn['as_id'], len(destinations)))
+	packet.append(pack("=hi", dictn['as_id'], int(len(destinations))))
 	for destination in destinations:
 		packet.append(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
 		route=destination['route']
-		packet.append(pack("=h",len(route)))
+		packet.append(pack("=h",int(len(route))))
 		for ass in route:
 			packet.append(pack("=h",ass))
 	return packet
@@ -208,7 +208,8 @@ def send_reachability_loop():
 	last_time = time()
 	while True:
 		if last_time + 30 <= time():
-				reachability_packet = parse_reachability_packet({'as_id':my_as_id,'destinations':reachability})
+				global reachability
+				reachability_packet = create_reachability_packet(as_id=my_as_id, destinations=reachability})
 				with as_neighbors_lock:
 					for connection in connections:
 						try:
@@ -384,7 +385,7 @@ def main():
 			with connections_lock:
 				connections.remove(this_connection)
 		elif choice == 3:
-			print(str(as_neighbors).replace(", ","\n"))
+			print(str(as_neighbors).replace("}, ","}\n"))
 		elif choice == 4:
 			r_ip = str(input('Escriba la IP del router: '))
 			r_mask = str(input('Escriba la máscara del router: '))
@@ -400,7 +401,7 @@ def main():
 						reachability.remove(router)
 						#TODO removed reachability to LOG
 		elif choice == 6:
-			print(str(reachability).replace(", ","\n"))
+			print(str(reachability).replace("}, ","}\n"))
 		else:
 			print("Escriba un número válido.\n")
 
