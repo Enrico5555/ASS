@@ -181,11 +181,10 @@ def parse_reachability_packet(buffer):
 	return {'as_id':as_id,'destinations':destinations}
 
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
-def create_reachability_packet(**dictn):
+def create_reachability_packet():
 	packet = bytearray()
-	destinations = dictn['destinations']
-	packet.append(pack("=hi", dictn['as_id'], int(len(destinations))))
-	for destination in destinations:
+	packet.append(pack("=hi", my_as_id, int(len(reachability))))
+	for destination in reachability:
 		packet.append(pack("=BBBBBBBB",*[ord(chr(int(x))) for x in (destination['ip']+"."+destination['mask']).split(".")]))
 		route=destination['route']
 		packet.append(pack("=h",int(len(route))))
@@ -209,7 +208,7 @@ def send_reachability_loop():
 	while True:
 		if last_time + 30 <= time():
 				global reachability
-				reachability_packet = create_reachability_packet(as_id=my_as_id, destinations=reachability})
+				reachability_packet = create_reachability_packet()
 				with as_neighbors_lock:
 					for connection in connections:
 						try:
