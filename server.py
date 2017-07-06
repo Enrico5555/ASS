@@ -125,7 +125,7 @@ def client_loop(ip, cli_socket):
 						thread = connection['thread']
 						connections.remove(connection)
 			thread.join()
-		else:
+		elif(int(first_byte) == REACHABILITY_UPDATE):
 			dictn = parse_reachability_packet(packet)
 			print(packet)
 			if dictn == 0:
@@ -170,20 +170,20 @@ def parse_connection_packet(buffer):
 
 #COMPONE UN PAQUETE CON DATOS DE NODO
 def create_connection_packet(**dictn):
-	return pack("=BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+	return pack("=BBHBBBBBBBB",5,dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
 
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
 #PAQUETES DE REACHABILITY UPDATE
 def parse_reachability_packet(buffer):
 	try:
 		b = []
-		b = unpack("=hi",buffer[:6]);
-		as_id = b[0]
-		destination_amount = b[1]
+		b = unpack("=Bhi",buffer[:7]);
+		as_id = b[1]
+		destination_amount = b[2]
 		destinations = []
-		byte_idx=6;
+		byte_idx=7;
 		for i in range(0,destination_amount):
-			b = unpack("=BBBBBBBBh",buffer[byte_idx:byte_idx+10])
+			b = unpack("=BBBBBBBBh",buffer[byte_idx:byte_idx+11])
 			ip = str(b[0])+"."+str(b[1])+"."+str(b[2])+"."+str(b[3])
 			mask  = str(b[4])+"."+str(b[5])+"."+str(b[6])+"."+str(b[7])
 			as_amount = b[8]
@@ -197,7 +197,8 @@ def parse_reachability_packet(buffer):
 			destinations.append(router)
 		return {'as_id':as_id,'destinations':destinations}
 	except Exception as e:
-	 	return 0;
+		print("OS error: {0}".format(e))
+		return 0
 
 #COMPONE UN PAQUETE CON ACTUALIZACIONES DE ALCANZABILIDAD
 def create_reachability_packet():
@@ -340,7 +341,7 @@ def main():
 					if(int(packet[0]) == ACCEPTED_CONNECTION): #Not sure if works, ==2: accept connection
 						dictn = parse_connection_packet(packet)
 						with as_neighbors_lock:
-							as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id'], 'route':dictn['as_id'], 'cost': 0})#TODO cost
+							as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id']})
 							as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
 							init_as_connection(vc_ip,cli_socket)
 						print("¡Conexión Exitosa!\n")
