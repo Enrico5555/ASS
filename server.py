@@ -150,11 +150,11 @@ def client_loop(ip, cli_socket):
 					if router.ip ==  destination.ip and router.mask == destination.mask:
 						if len(router.route) > (len(destination.route)+1):
 							router.route = destination.route
-							router.add_to_route(my_as_id)
+							router.add_to_route(as_from)
 						dont_have_it = False
 						break
 				if dont_have_it:
-					destination.add_to_route(my_as_id)
+					destination.add_to_route(as_from)
 					reachability.append(destination)
 					with reachability_log_lock:
 						reachability_log.append({'op': ADDED_ROUTER, 'ip': destination.ip, 'mask': destination.mask})
@@ -171,10 +171,9 @@ def init_as_connection(ip, cli_socket):
 #PAQUETES DE ( (REQUEST || ACCEPT) (CONNECTION || DISCONNECTION) )
 def parse_connection_packet(buffer):
 	if (len(buffer) != 11):
-		print ("no sea fofi")
 		return 0
 	b = []
-	b = unpack("=BHBBBBBBBB",buffer);
+	b = unpack(">BHBBBBBBBB",buffer);
 	as_id = int(b[1])
 	ip = str(b[2])+"."+str(b[3])+"."+str(b[4])+"."+str(b[5])
 	mask  = str(b[6])+"."+str(b[7])+"."+str(b[8])+"."+str(b[9])
@@ -184,7 +183,7 @@ def parse_connection_packet(buffer):
 
 #COMPONE UN PAQUETE CON DATOS DE NODO
 def create_connection_packet(**dictn):
-	return pack("=BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
+	return pack(">BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
 
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
 #PAQUETES DE REACHABILITY UPDATE
@@ -192,8 +191,6 @@ def parse_reachability_packet(buffer):
 	try:
 		b = []
 		b = unpack(">Bhi",buffer[:7])
-		print(buffer)
-		print(b)
 		as_id = b[1]
 		destination_amount = b[2]
 		destinations = []
