@@ -207,7 +207,7 @@ def parse_reachability_packet(buffer):
 			as_amount = b[8]
 			router = Router(ip,mask)
 			route = []
-			byte_idx= byte_idx+11
+			byte_idx= byte_idx+10
 			for j in range(0,as_amount):
 				route.append(unpack(">h",buffer[byte_idx:byte_idx+2])[0])
 				byte_idx=byte_idx+2
