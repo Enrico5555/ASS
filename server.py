@@ -120,12 +120,13 @@ def client_loop(ip, cli_socket):
 						as_neighbors.remove(ngh)
 						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Disconection success'})
 						for router in reachability:
-							if router.route[0] == ngh['as_id']:
+							if len(router.route)> 0:
+								if router.route[0] == ngh['as_id']:
 								# remove router since it's AS disconnected.
-								with reachability_lock:
-									reachability.remove(router)
-									with reachability_log_lock:
-										reachability_log.append({'op': REMOVED_ROUTER, 'ip': router.ip, 'mask': router.mask})
+									with reachability_lock:
+										reachability.remove(router)
+										with reachability_log_lock:
+											reachability_log.append({'op': REMOVED_ROUTER, 'ip': router.ip, 'mask': router.mask})
 			packet = create_connection_packet(type=ACCEPTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
 			try:
 				cli_socket.send(packet)
@@ -371,17 +372,17 @@ def main():
 							as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
 						break
 		elif choice == 2: #DISCONNECT
-			vc_number = int(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
+			vc_ip = str(input('Escriba el ip del vecino a desconectar: '))
 			neighbor = 0
 			for p in as_neighbors:
-				 if p['as_id'] == vc_number:
+				 if p['ip'] == vc_ip:
 					 neighbor = p
 			if(neighbor == 0):
 				print('No existe ese s.a. en los vecinos')
 				continue
 
 			for connection in connections:
-				if connection['ip'] == neighbor['ip']:
+				if connection['ip'] == vc_ip:
 					cli_socket = connection['socket']
 					thread = connection['thread']
 					this_connection = connection
@@ -390,12 +391,14 @@ def main():
 			cli_socket.send(packet)
 			try:
 				packet = cli_socket.recv(RECIEVE_BUFFER)
+				if not packet:
+					raise socket.error
 			except socket.timeout:
 				with as_neighbors_lock:
 					as_neighbors_log.append({'op': CONNECTION_TIMEOUT, 'timestamp': time(), 'as_id': neighbor['as_id'], 'message':'Disconection timeout'})
 				answer = str(input('Confirmación de desconexión duró más de 5 segundos, desconectando...'))
 				print('¡Desconexión Exitosa!\n')
-			except socket.error:
+			except (socket.error,OSError):
 				print('¡Error de conexión del socket!\n')
 				with as_neighbors_lock:
 					as_neighbors.remove(neighbor)
