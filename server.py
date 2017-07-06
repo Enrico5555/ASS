@@ -46,10 +46,10 @@ class Router:
 		self.route.insert(0,as_id)
 
 	def __str__(self):
-		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
+		return "{ 'ip': "+self.ip+", 'mask': "+self.mask+ ", 'route': "+str(self.route)+ " }"
 
 	def __repr__(self):
-		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
+		return "{ 'ip': "+self.ip+", 'mask': "+self.mask+ ", 'route': "+str(self.route)+ " }"
 
 global connections
 connections = []
@@ -185,9 +185,8 @@ def parse_reachability_packet(buffer):
 		print(b)
 		as_id = b[1]
 		destination_amount = b[2]
-
 		destinations = []
-		byte_idx=6;
+		byte_idx=7;
 		for i in range(0,destination_amount):
 			b = unpack(">BBBBBBBBh",buffer[byte_idx:byte_idx+10])
 			print(b)
