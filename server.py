@@ -48,6 +48,9 @@ class Router:
 	def __str__(self):
 		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
 
+	def __retr__(self):
+		return "{ 'ip': "+ip+", 'mask': "+mask+ ", 'route': "+str(route)+ " }"
+
 global connections
 connections = []
 connections_lock = threading.Lock()
@@ -193,7 +196,7 @@ def parse_reachability_packet(buffer):
 			for j in range(0,as_amount):
 				route.append(unpack("=h",buffer[byte_idx:byte_idx+2]))
 				byte_idx=byte_idx+2
-			router.extend_route(route);
+			router.route = route;
 			destinations.append(router)
 		return {'as_id':as_id,'destinations':destinations}
 	except Exception as e:
