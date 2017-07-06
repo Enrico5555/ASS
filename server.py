@@ -83,10 +83,15 @@ def client_loop(ip, cli_socket):
 			with as_neighbors_lock:
 				as_neighbors.append({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id']})
 				as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Conection success'})
-				print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
+				#print(my_as_ip + ';' + my_as_mask + ';' + str(my_as_id))
 				#send connection ack
+
+				print("\tSe ha logrado una conexión exitosa con: " + str({'ip': dictn['ip'], 'mask': dictn['mask'], 'as_id': dictn['as_id']}))
 				packet = create_connection_packet(type=ACCEPTED_CONNECTION, as_id=my_as_id , ip=my_as_ip, mask=my_as_mask )
-				cli_socket.send(packet)
+				try:
+					cli_socket.send(packet)
+				except socket.error:
+					print("Error en conexión")
 		elif(int(first_byte) == REQUESTED_DISCONNECTION):
 			dictn = parse_connection_packet(packet)
 			for ngh in as_neighbors[:]:
@@ -95,7 +100,10 @@ def client_loop(ip, cli_socket):
 						as_neighbors.remove(ngh)
 						as_neighbors_log.append({'op': DISCONNECTION_SUCCESS, 'timestamp': time(), 'as_id': dictn['as_id'], 'message':'Disconection success'})
 			packet = create_connection_packet(type=ACCEPTED_DISCONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
-			cli_socket.send(packet)
+			try:
+				cli_socket.send(packet)
+			except socket.error:
+				print("Error en conexión")
 			thread =None
 			for connection in connections[:]:
 				if(connection['ip'] == dictn['ip']):
@@ -145,7 +153,6 @@ def parse_connection_packet(buffer):
 
 #COMPONE UN PAQUETE CON DATOS DE NODO
 def create_connection_packet(**dictn):
-	print(dictn)
 	return pack("=BHBBBBBBBB",dictn['type'],dictn['as_id'],*[ord(chr(int(x))) for x in (dictn['ip']+"."+dictn['mask']).split(".")])
 
 #DESCOMPONE EL PAQUETE PARA OBTENER SUS DATOS
@@ -204,7 +211,10 @@ def send_reachability_loop():
 				reachability_packet = parse_reachability_packet({'as_id':my_as_id,'destinations':reachability})
 				with as_neighbors_lock:
 					for connection in connections:
-						connection['socket'].send(reachability_packet)
+						try:
+							connection['socket'].send(reachability_packet)
+						except socket.error:
+							print("Error en conexión")
 				last_time = time()
 
 def main():
@@ -279,10 +289,8 @@ def main():
 				continue
 			while True:
 				packet = create_connection_packet(type=REQUESTED_CONNECTION, as_id=my_as_id ,ip=my_as_ip, mask=my_as_mask )
-				cli_socket.send(packet)
-				#sent_time=time()
-
 				try:
+					cli_socket.send(packet)
 					packet = cli_socket.recv(RECIEVE_BUFFER)
 				except socket.timeout:
 					with as_neighbors_lock:
@@ -316,13 +324,13 @@ def main():
 							as_neighbors_log.append({'op': CONNECTION_SUCCESS, 'timestamp': time(), 'as_id': vc_number, 'message':'Conection success'}) # op: 1 = CREATE
 							init_as_connection(vc_ip,cli_socket)
 						print("¡Conexión Exitosa!\n")
+						break
 					else:
 						print('¡Error de paquete!\n')
 						cli_socket.close()
 						with as_neighbors_lock:
 							as_neighbors_log.append({'op': CONNECTION_ERROR, 'timestamp': time(), 'as_id': vc_number, 'message':'Packet error'})
-
-
+						break
 		elif choice == 2: #DISCONNECT
 			vc_number = str(input('Escriba el numero de sistema autónomo vecino a desconectar: '))
 			found = [p for p in as_neighbors if p['as_id'] == vc_number]
