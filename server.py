@@ -426,10 +426,15 @@ def main():
 		elif choice == 4:
 			r_ip = str(input('Escriba la IP del router: '))
 			r_mask = str(input('Escriba la máscara del router: '))
+			route = str(input('Escriba la ruta dividos por coma: '))
+			if route != "":
+				route = [int(x.replace(" ","")) for x in route.split(",")]
+			else:
+				route = []
 			with reachability_lock:
 				router = Router(r_ip,r_mask)
+				router.route = route
 				reachability.append(router)
-				#TODO added reachability to LOG
 		elif choice == 5:
 			r_ip = str(input('Escriba la IP del router a borrar: '))
 			r_mask = str(input('Escriba la máscara del router a borrar: '))
